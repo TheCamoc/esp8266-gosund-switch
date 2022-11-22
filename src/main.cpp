@@ -24,7 +24,9 @@ void reconnect()
     if (client.connect(clientId.c_str()))
     {
         Serial.println("connected");
-        client.subscribe(ESPTools.config["mqtt_topic"].c_str());
+        if (!ESPTools.config["mqtt_topic"].equals("")) {
+            client.subscribe(ESPTools.config["mqtt_topic"].c_str());
+        }
     }
     else
     {
@@ -37,10 +39,6 @@ void reconnect()
 
 void onMessage(char *topic, byte *payload, unsigned int length)
 {
-    for (unsigned int i = 0; i < length; i++)
-    {
-        Serial.print((char)payload[i]);
-    }
     DynamicJsonDocument doc(1024);
     deserializeJson(doc, (char *)payload);
 
@@ -54,56 +52,23 @@ void onMessage(char *topic, byte *payload, unsigned int length)
     }
 }
 
-void resetWifi()
-{
-    server.send(200, "text/plain", "done");
-    delay(100);
-    WiFiManager wifiManager;
-    wifiManager.resetSettings();
-    delay(200);
-    ESP.restart();
-}
-
 void setup()
 {
-    // WiFi, WebServer and OTA setup
     Serial.begin(115200);
-    Serial.println();
-    delay(1000);
+    Serial.println("");
 
     ESPTools.begin(&server);
-
-    ESPTools.addConfigString("hostname");
+    ESPTools.wifiAutoConnect();
+    ESPTools.setupHTTPUpdates();
     ESPTools.addConfigString("mqtt_server");
     ESPTools.addConfigString("mqtt_topic");
 
-    WiFi.mode(WIFI_STA);
-    WiFi.hostname(ESPTools.config["hostname"].c_str());
-
-    WiFiManager wifiManager;
-    Serial.println("");
-
-    if (!wifiManager.autoConnect())
-    {
-        Serial.println("failed to connect and hit timeout");
-        delay(3000);
-        ESP.restart();
-    }
-
-    Serial.println("");
-    Serial.print("Connected to ");
-    Serial.println(WiFi.SSID());
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-
-    server.on("/reset_wifi", resetWifi);
     server.on("/restart", [&]() {
         server.send(200, "text/plain", "Ok");
         delay(500);
         ESP.restart();
     });
-    // OTA Stuff
-    httpUpdater.setup(&server);
+
     server.begin();
 
     // Setup MQTT
