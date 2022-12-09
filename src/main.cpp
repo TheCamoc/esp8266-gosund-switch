@@ -63,12 +63,6 @@ void setup()
     ESPTools.addConfigString("mqtt_server");
     ESPTools.addConfigString("mqtt_topic");
 
-    server.on("/restart", [&]() {
-        server.send(200, "text/plain", "Ok");
-        delay(500);
-        ESP.restart();
-    });
-
     server.begin();
 
     // Setup MQTT
